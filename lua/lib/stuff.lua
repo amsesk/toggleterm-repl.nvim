@@ -10,50 +10,30 @@ local term = require("toggleterm.terminal")
 local Terminal = term.Terminal
 --local rlangrepl = { cmd = "R", direction = "horizontal", hidden = false, repl_type = "rlang"}
 
-function pyreplopts()
-    return { cmd = "ipython --no-autoindent", direction = "horizontal", hidden = false, repl_type = "python" }
-end
-
-function rlangreplopts()
-    return { cmd = "R", direction = "horizontal", hidden = false, repl_type = "r" }
-end
-
 M.replopts = {
-    py = { cmd = "ipython --no-autoindent", direction = "horizontal", hidden = false, repl_type = "python" },
-    r = { cmd = "R", direction = "horizontal", hidden = false, repl_type = "r" },
-}
-
-M.REPLOPT = {
-    python = pyreplopts,
-    r = rlangreplopts,
+    python = {
+        cmd = "ipython --no-autoindent",
+        direction = "horizontal",
+        hidden = false,
+        repl_type = "python",
+    },
+    r = {
+        cmd = "R",
+        direction = "horizontal",
+        hidden = false,
+        repl_type = "r",
+    },
+    default = {
+        cmd = "zsh",
+        direction = "horizontal",
+        hidden = false,
+        repl_type = nil,
+    }
 }
 
 M.active_repl = nil
 
 BFT = vim.bo.filetype
-
--- shamelessly borrowed from harpoon
-function M._create_window()
-    local height = 8
-    local width = 69
-    local bufnr = vim.api.nvim_create_buf(false, true)
-    local win_id = vim.api.nvim_open_win(bufnr, true, {
-        relative = "editor",
-        title = "REPLs",
-        --title_pos = toggle_opts.title_pos or "left",
-        row = math.floor(((vim.o.lines - height) / 2) - 1),
-        col = math.floor((vim.o.columns - width) / 2),
-        width = width,
-        height = height,
-        style = "minimal",
-        border = "double",
-        --border = toggle_opts.border or "single",
-    })
-    local repllist = List.ToggleTermReplList
-    repllist.items = { "a", "b", "c", "hi" }
-    local contents = repllist:display()
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, contents)
-end
 
 function _update_buf_ft(bft)
     if bft ~= "toggleterm" then
@@ -141,45 +121,17 @@ function M._new_repl(termopts, display_name, make_focused)
     return repl
 end
 
-function M.new_ft_repl()
+function M.new_ft_repl(make_focused)
     _update_buf_ft(vim.bo.filetype)
+    make_focused = make_focused or true
     local existing_repls = M.get_term_by("repl_type", BFT)
     local repl_display_name = string.format("%s-%s", BFT, #existing_repls + 1)
-    M._new_repl(M.REPLOPT[BFT](), repl_display_name, true):open()
-    --if (BFT == "python") then
-    --    M._new_repl(pyreplopts(), repl_display_name, true):open()
-    --end
+    local termopts = M.replopts[BFT] or M.replopts["default"]
+    M._new_repl(termopts, repl_display_name, make_focused):open()
 end
 
-function M._create_or_toggle_repl()
-    _update_buf_ft(vim.bo.filetype)
-    if BFT == "python" then
-        local pyrepls = M.get_term_by("repl_type", BFT)
-        if #pyrepls == 0 then
-            M._new_repl(pyreplopts(), "ipython", true):open()
-        else
-            if #pyrepls == 1 then
-                pyrepls[1]:toggle()
-                M.active_repl = pyrepls[1]["id"]
-            else
-                vim.cmd("Telescope toggleterm_mananger")
-            end
-        end
-    elseif BFT == "r" then
-        local rlangrepls = M.get_term_by("repl_type", BFT)
-        if #rlangrepls == 0 then
-            M._new_repl(rlangreplopts(), "r", true):open()
-        else
-            if #rlangrepls == 1 then
-                rlangrepls[1]:toggle()
-                M.active_repl = rlangrepls[1]["id"]
-            else
-                vim.cmd("Telescope toggleterm_mananger")
-            end
-        end
-    else
-        tt.toggle_command()
-    end
+function M.new_ft_repl_with_name(display_name, make_focused)
+    M.new_ft_repl(M.replopts[BFT], display_name, make_focused)
 end
 
 function M.setup_commands()
@@ -194,8 +146,63 @@ function M.setup_commands()
         M.new_ft_repl()
     end, {})
     command("TTNewRepl", function(opts)
-        M._new_repl(M.replopts[opts.fargs[1]], "ipython", true):open()
+        M._new_repl(M.replopts[opts.fargs[1]], opts.fargs[1], true):open()
     end, { nargs = 1 })
 end
 
 return M
+
+-- Deprecate
+-- function _create_or_toggle_repl()
+--     _update_buf_ft(vim.bo.filetype)
+--     if BFT == "python" then
+--         local pyrepls = M.get_term_by("repl_type", BFT)
+--         if #pyrepls == 0 then
+--             M._new_repl(pyreplopts(), "ipython", true):open()
+--         else
+--             if #pyrepls == 1 then
+--                 pyrepls[1]:toggle()
+--                 M.active_repl = pyrepls[1]["id"]
+--             else
+--                 vim.cmd("Telescope toggleterm_mananger")
+--             end
+--         end
+--     elseif BFT == "r" then
+--         local rlangrepls = M.get_term_by("repl_type", BFT)
+--         if #rlangrepls == 0 then
+--             M._new_repl(rlangreplopts(), "r", true):open()
+--         else
+--             if #rlangrepls == 1 then
+--                 rlangrepls[1]:toggle()
+--                 M.active_repl = rlangrepls[1]["id"]
+--             else
+--                 vim.cmd("Telescope toggleterm_mananger")
+--             end
+--         end
+--     else
+--         tt.toggle_command()
+--     end
+-- end
+--
+-- -- shamelessly borrowed from harpoon
+-- function M._create_window()
+--     local height = 8
+--     local width = 69
+--     local bufnr = vim.api.nvim_create_buf(false, true)
+--     local win_id = vim.api.nvim_open_win(bufnr, true, {
+--         relative = "editor",
+--         title = "REPLs",
+--         --title_pos = toggle_opts.title_pos or "left",
+--         row = math.floor(((vim.o.lines - height) / 2) - 1),
+--         col = math.floor((vim.o.columns - width) / 2),
+--         width = width,
+--         height = height,
+--         style = "minimal",
+--         border = "double",
+--         --border = toggle_opts.border or "single",
+--     })
+--     local repllist = List.ToggleTermReplList
+--     repllist.items = { "a", "b", "c", "hi" }
+--     local contents = repllist:display()
+--     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, contents)
+-- end
