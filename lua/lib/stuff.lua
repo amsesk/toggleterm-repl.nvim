@@ -80,6 +80,15 @@ function M.send_lines()
     tt.send_lines_to_terminal("visual_lines", false, { args = M.active_repl }, true)
 end
 
+function M.send_visual_selection()
+    if M.active_repl == nil then
+        local current_window = api.nvim_get_current_win()
+        M.new_ft_repl()
+        api.nvim_set_current_win(current_window)
+    end
+    tt.send_lines_to_terminal("visual_selection", false, { args = M.active_repl }, true)
+end
+
 function M.run_cell_and_move()
     if M.active_repl == nil then
         local current_window = api.nvim_get_current_win()

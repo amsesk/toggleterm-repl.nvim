@@ -33,7 +33,7 @@ function M.open()
         end
     }
 
-    local repls = pickers.new(opts)
+    local repls = pickers.new(opts, {})
 
     repls:find()
 end
