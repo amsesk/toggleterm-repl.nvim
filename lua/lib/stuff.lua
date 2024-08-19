@@ -8,9 +8,12 @@ local M = {}
 
 local term = require("toggleterm.terminal")
 local Terminal = term.Terminal
+
+local repls = {}
+
 --local rlangrepl = { cmd = "R", direction = "horizontal", hidden = false, repl_type = "rlang"}
 
-M.replopts = {
+local replopts = {
     python = {
         cmd = "ipython --no-autoindent",
         direction = "horizontal",
@@ -28,12 +31,20 @@ M.replopts = {
         direction = "horizontal",
         hidden = false,
         repl_type = nil,
-    }
+    },
 }
 
 M.active_repl = nil
 
 BFT = vim.bo.filetype
+
+function M.optgen(repl_type)
+    local ropts = {}
+    for k, v in pairs(replopts[repl_type]) do
+        ropts[k] = v
+    end
+    return ropts
+end
 
 function _update_buf_ft(bft)
     if bft ~= "toggleterm" then
@@ -43,15 +54,16 @@ end
 
 -- Local function from toggleterm.terminal that I needed to copy/paste here to use
 -- in giving new terminals the correct index
-function term_next_id()
-    local all = term.get_all(true)
-    for index, term in pairs(all) do
-        if index ~= term.id then
-            return index
-        end
-    end
-    return #all + 1
-end
+-- function M.term_next_id()
+    -- for index, term in pairs(all) do
+    --     print(index)
+    --     print(term.id)
+    --     if index ~= term.id then
+    --         return index
+    --     end
+    -- end
+--     return #repls + 1
+-- end
 
 function M.get_term_by(key, value)
     local all = term.get_all(true)
@@ -119,10 +131,7 @@ function M.set_active(id)
 end
 
 function M._new_repl(termopts, display_name, make_focused)
-    make_focused = make_focused or true
-    display_name = display_name or "python"
-    termopts["display_name"] = display_name
-    termopts["id"] = term_next_id()
+    termopts["display_name"] = display_name or "terminal"
     local repl = Terminal:new(termopts)
     if make_focused then
         M.active_repl = repl["id"]
@@ -135,7 +144,7 @@ function M.new_ft_repl(make_focused)
     make_focused = make_focused or true
     local existing_repls = M.get_term_by("repl_type", BFT)
     local repl_display_name = string.format("%s-%s", BFT, #existing_repls + 1)
-    local termopts = M.replopts[BFT] or M.replopts["default"]
+    local termopts = M.optgen(BFT) or M.optgen("default")
     M._new_repl(termopts, repl_display_name, make_focused):open()
 end
 
@@ -155,7 +164,7 @@ function M.setup_commands()
         M.new_ft_repl()
     end, {})
     command("TTNewRepl", function(opts)
-        M._new_repl(M.replopts[opts.fargs[1]], opts.fargs[1], true):open()
+        M._new_repl(M.optgen(opts.fargs[1]), opts.fargs[1], true):open()
     end, { nargs = 1 })
 end
 
