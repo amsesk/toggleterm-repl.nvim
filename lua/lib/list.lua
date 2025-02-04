@@ -3,10 +3,10 @@
 --- @field display_name string
 --- @field type string
 --- @field _length number
-local ToggleTermReplItem = {}
+local ToggleTermItem = {}
 
-function ToggleTermReplItem:new(id, display_name, type)
-    newitem = setmetatable({
+function ToggleTermItem:new(id, display_name, type)
+    local newitem = setmetatable({
         id = id,
         display_name = display_name,
         type = type,
@@ -15,37 +15,48 @@ function ToggleTermReplItem:new(id, display_name, type)
     return newitem
 end
 
-function ToggleTermReplItem:display()
-    return self.id .. ", " .. self.display_name .. ", " .. self.type
+function ToggleTermItem:display()
+    return self.id .. ": " .. self.display_name 
+    -- return self.id .. ", " .. self.display_name .. ", " .. self.type
 end
 
---- @class ToggleTermReplList
+--- @class ToggleTermList
 --- @field items any[]
 --- @field _length number
-local ToggleTermReplList = {}
+local ToggleTermList = {}
 
-function ToggleTermReplList:new()
-    newlist = setmetatable({
+function ToggleTermList:new()
+    local newlist = setmetatable({
         items = {},
+        _length = 0,
     }, self)
     self.__index = self
     return newlist
 end
 
-function ToggleTermReplList:display()
+function ToggleTermList:_n_entries()
+    local count = 0
+    for _ in pairs(self.items) do
+        count = count + 1
+    end
+    return count
+end
+
+function ToggleTermList:display()
     local out = {}
     for i = 1, self._length do
         local v = self.items[i]
-        print(vim.inspect(v.id))
-        out[i] = v == nil and "" or v:display()
+        -- out[i] = v
+        out[i] = v:display()
     end
 
     return out
 end
 
-function ToggleTermReplList:append(id, display_name, type)
-    table.insert(self.items, ToggleTermReplItem:new(id, display_name, type))
+function ToggleTermList:append(id, display_name, type)
+    table.insert(self.items, ToggleTermItem:new(id, display_name, type))
+    self._length = self._length + self:_n_entries()
     return self
 end
 
-return ToggleTermReplList
+return ToggleTermList

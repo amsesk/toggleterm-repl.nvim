@@ -15,6 +15,7 @@ local repls = {}
 
 local replopts = {
     python = {
+        -- cmd = "python3.13",
         cmd = "ipython --no-autoindent",
         direction = "horizontal",
         hidden = false,
@@ -55,13 +56,13 @@ end
 -- Local function from toggleterm.terminal that I needed to copy/paste here to use
 -- in giving new terminals the correct index
 -- function M.term_next_id()
-    -- for index, term in pairs(all) do
-    --     print(index)
-    --     print(term.id)
-    --     if index ~= term.id then
-    --         return index
-    --     end
-    -- end
+-- for index, term in pairs(all) do
+--     print(index)
+--     print(term.id)
+--     if index ~= term.id then
+--         return index
+--     end
+-- end
 --     return #repls + 1
 -- end
 
@@ -112,11 +113,26 @@ function M.run_cell_and_move()
         -- Trimming spaces here screws up text sent to ipython
         trim_spaces = false,
     }
-    nn.run_and_move(repl_args)
+        nn.run_and_move(repl_args)
+end
+
+function M.get_repl_window(id)
+    local repl = M.get_term_by("id", id)[1]
+    local bufnr = repl.bufnr
+    local repl_win = nil
+    local winlist = vim.api.nvim_list_wins()
+    for _, win in ipairs(winlist) do
+        local buf = vim.api.nvim_win_get_buf(win)
+        if buf == bufnr then
+            repl_win = win
+            break
+        end
+    end
+    return repl_win
 end
 
 function M.set_active(id)
-    local id = tonumber(id)
+    id = tonumber(id)
     if M.active_repl ~= nil then
         local last_active_term = M.get_term_by("id", M.active_repl)[M.active_repl]
         last_active_term.display_name = string.gsub(last_active_term.display_name, "*$", "")
@@ -137,6 +153,17 @@ function M._new_repl(termopts, display_name, make_focused)
         M.active_repl = repl["id"]
     end
     return repl
+end
+
+function M.get_all_repls(include_hidden)
+    local all_repls = {}
+    local all_terms = term.get_all(include_hidden)
+    for _k, v in pairs(all_terms) do
+        if v.repl_type then
+            table.insert(all_repls, v)
+        end
+    end
+    return all_repls
 end
 
 function M.new_ft_repl(make_focused)
@@ -202,25 +229,16 @@ return M
 --     end
 -- end
 --
--- -- shamelessly borrowed from harpoon
--- function M._create_window()
---     local height = 8
---     local width = 69
---     local bufnr = vim.api.nvim_create_buf(false, true)
---     local win_id = vim.api.nvim_open_win(bufnr, true, {
---         relative = "editor",
---         title = "REPLs",
---         --title_pos = toggle_opts.title_pos or "left",
---         row = math.floor(((vim.o.lines - height) / 2) - 1),
---         col = math.floor((vim.o.columns - width) / 2),
---         width = width,
---         height = height,
---         style = "minimal",
---         border = "double",
---         --border = toggle_opts.border or "single",
---     })
---     local repllist = List.ToggleTermReplList
---     repllist.items = { "a", "b", "c", "hi" }
---     local contents = repllist:display()
---     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, contents)
+-- function M.py313_toggle_paste(id)
+--     local starting_window = vim.api.nvim_get_current_win()
+--     local repl_window = M.get_repl_window(id)
+--     local f3 = vim.api.nvim_replace_termcodes("<F3>", true, true, true)
+--     local esc = vim.api.nvim_replace_termcodes("<ESC>", true, true, true)
+--     if starting_window ~= repl_window then
+--         vim.api.nvim_set_current_win(repl_window)
+--     end
+--     vim.api.nvim_feedkeys("i", "t", false)
+--     vim.api.nvim_feedkeys(f3, "t", false)
+--     vim.api.nvim_feedkeys(esc, "t", false)
+--     vim.schedule_wrap( vim.api.nvim_set_current_win(starting_window) )
 -- end
