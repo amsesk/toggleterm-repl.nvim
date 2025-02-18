@@ -28,10 +28,10 @@ local replopts = {
         repl_type = "r",
     },
     default = {
-        cmd = "zsh",
+        display_name = "default",
         direction = "horizontal",
         hidden = false,
-        repl_type = nil,
+        repl_type = "default",
     },
 }
 
@@ -39,12 +39,30 @@ M.active_repl = nil
 
 BFT = vim.bo.filetype
 
-function M.optgen(repl_type)
-    local ropts = {}
-    for k, v in pairs(replopts[repl_type]) do
-        ropts[k] = v
+function M.select_active_repl(opts)
+    local terminals = M.get_all_repls(true)
+    if #terminals == 0 then
+        vim.notify("No REPLS are open yet")
+        return
     end
-    return ropts
+    vim.ui.select(terminals, {
+        prompt = "Please select a REPL to set as active: ",
+        format_item = function(term) return term.id .. ": " .. term:_display_name() end,
+    }, function(_, idx)
+        local term = terminals[idx]
+        if not term then return end
+        M.set_active(idx)
+    end)
+end
+
+
+function M.optgen(repl_type)
+    local ropts = replopts[repl_type] or replopts["default"]
+    local ret = {}
+    for k, v in pairs(ropts) do
+        ret[k] = v
+    end
+    return ret
 end
 
 function _update_buf_ft(bft)
@@ -52,19 +70,6 @@ function _update_buf_ft(bft)
         BFT = bft
     end
 end
-
--- Local function from toggleterm.terminal that I needed to copy/paste here to use
--- in giving new terminals the correct index
--- function M.term_next_id()
--- for index, term in pairs(all) do
---     print(index)
---     print(term.id)
---     if index ~= term.id then
---         return index
---     end
--- end
---     return #repls + 1
--- end
 
 function M.get_term_by(key, value)
     local all = term.get_all(true)
@@ -169,10 +174,15 @@ end
 function M.new_ft_repl(make_focused)
     _update_buf_ft(vim.bo.filetype)
     make_focused = make_focused or true
-    local existing_repls = M.get_term_by("repl_type", BFT)
-    local repl_display_name = string.format("%s-%s", BFT, #existing_repls + 1)
-    local termopts = M.optgen(BFT) or M.optgen("default")
+    local termopts = M.optgen(BFT)
+    local existing_repls = M.get_term_by("repl_type", termopts.repl_type)
+    local repl_display_name = string.format("%s-%s", termopts.repl_type, #existing_repls + 1)
     M._new_repl(termopts, repl_display_name, make_focused):open()
+    if termopts.repl_type == "default" then
+        vim.notify("Opening default terminal")
+    else 
+        vim.notify("Opening " .. termopts.repl_type .. " REPL.")
+    end
 end
 
 function M.new_ft_repl_with_name(display_name, make_focused)
@@ -190,6 +200,9 @@ function M.setup_commands()
     command("ToggleTermFtReplNew", function()
         M.new_ft_repl()
     end, {})
+    command("ToggleTermSelectActive", function()
+        M.select_active_repl()
+    end, {})
     command("TTNewRepl", function(opts)
         M._new_repl(M.optgen(opts.fargs[1]), opts.fargs[1], true):open()
     end, { nargs = 1 })
@@ -198,6 +211,18 @@ end
 return M
 
 -- Deprecate
+-- Local function from toggleterm.terminal that I needed to copy/paste here to use
+-- in giving new terminals the correct index
+-- function M.term_next_id()
+-- for index, term in pairs(all) do
+--     print(index)
+--     print(term.id)
+--     if index ~= term.id then
+--         return index
+--     end
+-- end
+--     return #repls + 1
+-- end
 -- function _create_or_toggle_repl()
 --     _update_buf_ft(vim.bo.filetype)
 --     if BFT == "python" then
