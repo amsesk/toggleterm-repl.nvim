@@ -27,6 +27,12 @@ local replopts = {
         hidden = false,
         repl_type = "r",
     },
+    julia = {
+        cmd = "julia",
+        direction = "horizontal",
+        hidden = "false",
+        repl_type = "julia",
+    },
     default = {
         display_name = "default",
         direction = "horizontal",
@@ -193,11 +199,12 @@ function M.setup_commands()
     local command = api.nvim_create_user_command
     command("ReplSetActive", function(opts)
         M.set_active(opts.fargs[1])
+        vim.notify("Active repl set to " .. opts.fargs[1])
     end, { nargs = 1 })
     command("ReplGetActive", function()
         print(M.active_repl)
     end, {})
-    command("ToggleTermFtReplNew", function()
+    command("TTFtReplNew", function()
         M.new_ft_repl()
     end, {})
     command("ToggleTermSelectActive", function()
